@@ -74,6 +74,6 @@ sentiment-app/
 
 | Rôle | Nom | Identifiant GitHub | Travail de la semaine 1 |
 | --- | --- | --- | --- |
-| Membre A | [Nom 1] | [@login] | |
-| Membre B | [Nom 2] | [@login] | |
+| Membre A | [Kajaj Fatima Ezzahra] | [@login] | |
+| Membre B | [Hajar elkhadi && Ikram sakhi] | [@login] | |
 >>>>>>> d7db57a (Semaine 1 : structure du dépôt et kit TP1)
