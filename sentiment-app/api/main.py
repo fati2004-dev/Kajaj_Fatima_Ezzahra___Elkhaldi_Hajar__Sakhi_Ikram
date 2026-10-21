@@ -11,7 +11,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.model import load_model
+from api.model import SentimentClassifier, load_model
 from api.schemas import HealthResponse, PredictRequest, PredictResponse
 
 logging.basicConfig(
@@ -52,7 +52,7 @@ app.add_middleware(
 )
 
 
-def _classifier():
+def _classifier() -> SentimentClassifier:
     """Retourne le classifier ou signale qu'il n'est pas chargé."""
     clf = getattr(app.state, "classifier", None)
     if clf is None:
@@ -84,17 +84,16 @@ async def health_check():
 
 @app.post("/predict", response_model=PredictResponse, summary="Classifier un texte")
 async def predict(request: PredictRequest):
-    """Renvoie le sentiment et le score de confiance.
+    """Renvoie le sentiment, une éventuelle abstention et la confiance.
 
-    422 : requête invalide selon le schéma Pydantic.
-    503 : modèle non chargé.
-    500 : erreur interne pendant la prédiction.
+    - 422 : texte vide ou trop long (Pydantic)
+    - 503 : modèle non chargé
+    - 500 : erreur inattendue (journalisée côté serveur, jamais renvoyée au client)
     """
     clf = _classifier()
 
     try:
         result = clf.predict(request.text)
-
         if result["label"] not in {
             "POSITIVE",
             "NEGATIVE",
@@ -108,13 +107,12 @@ async def predict(request: PredictRequest):
 
     except HTTPException:
         raise
-
-    except Exception as e:
+    except Exception as error:
         logger.exception("Erreur lors de la prédiction")
         raise HTTPException(
             status_code=500,
             detail="Erreur interne du serveur",
-        ) from e
+        ) from error
 
     logger.info(
         "predict: %r -> %s (%.2f)",
@@ -122,7 +120,6 @@ async def predict(request: PredictRequest):
         result["label"],
         result["score"],
     )
-
     return result
 
 

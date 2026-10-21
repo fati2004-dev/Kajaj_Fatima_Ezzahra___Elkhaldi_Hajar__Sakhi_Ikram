@@ -50,20 +50,14 @@ def test_required_file_exists(root: Path, filename):
 
 
 def test_requirements_pins_versions(root: Path):
-    lignes = [
-        ligne.strip()
-        for ligne in (root / "requirements.txt")
-        .read_text(encoding="utf-8")
-        .splitlines()
+    lines = [
+        line.strip()
+        for line in (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
     ]
-    lignes = [
-        ligne for ligne in lignes if ligne and not ligne.startswith("#")
-    ]
-
-    assert lignes, "requirements.txt est vide"
-
-    for ligne in lignes:
-        assert "==" in ligne, f"version non figée : {ligne}"
+    lines = [line for line in lines if line and not line.startswith("#")]
+    assert lines, "requirements.txt est vide"
+    for line in lines:
+        assert "==" in line, f"version non figée : {line}"
 
 
 @pytest.mark.parametrize(
@@ -77,23 +71,31 @@ def test_gitignore_contains(root: Path, pattern):
 
 def test_no_real_env_file_committed(root: Path):
     """Un .env peut exister localement, mais ne doit pas être suivi par Git."""
-    git_dir = root / ".git"
-
-    if not git_dir.exists():
+    try:
+        repo_root = Path(
+            subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            ).stdout.strip()
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
         pytest.skip("pas un dépôt Git")
-
-    resultat = subprocess.run(
+    tracked = subprocess.run(
         ["git", "ls-files"],
-        cwd=root,
+        cwd=repo_root,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
-    )
-    fichiers_suivis = resultat.stdout.split()
-
-    assert ".env" not in fichiers_suivis, (
-        ".env est suivi par Git : git rm --cached .env"
+    ).stdout.split()
+    project_path = root.relative_to(repo_root).as_posix()
+    assert f"{project_path}/.env" not in tracked, (
+        ".env est suivi par Git : git rm --cached sentiment-app/.env"
     )
     assert not any(
-        fichier.startswith(".venv/") for fichier in fichiers_suivis
+        path.startswith(f"{project_path}/.venv/") for path in tracked
     ), ".venv/ est suivi par Git"

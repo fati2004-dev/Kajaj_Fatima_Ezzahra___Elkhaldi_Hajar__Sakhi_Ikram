@@ -50,6 +50,11 @@ def main() -> int:
     for nom, ligne in zip(etiquettes, mc, strict=True):
         print(f"{nom:>10}{ligne[0]:>10}{ligne[1]:>10}")
 
+    if len(etiquettes) == 2:
+        faux_negatifs = mc[1][0]
+        faux_positifs = mc[0][1]
+        print(f"\n{faux_positifs} négatifs classés positifs, {faux_negatifs} positifs classés négatifs")
+
     erreurs = [
         (texte, vrai, predit)
         for texte, vrai, predit in zip(X_test, y_test, y_pred, strict=True)

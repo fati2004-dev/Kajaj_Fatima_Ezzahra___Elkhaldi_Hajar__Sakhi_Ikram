@@ -1,17 +1,20 @@
+"""Tests d'intégration : l'API telle qu'elle tourne vraiment (TP4, étape D)."""
 
-"""Tests d'intégration de l'API (TP4, étape D)."""
-
+from importlib import import_module
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
-RACINE = Path(__file__).resolve().parents[1]
-MODELE = RACINE / "models" / "sentiment.joblib"
+MODELE = Path(__file__).resolve().parents[1] / "models" / "sentiment.joblib"
 
 
 @pytest.fixture
 def client():
     """Démarre réellement l'application et exécute son lifespan."""
+    if not MODELE.exists():
+        pytest.skip("modèle non produit : python src/train.py")
     from fastapi.testclient import TestClient
 
     from api.main import app
@@ -33,23 +36,18 @@ def test_modele_absent_empeche_le_demarrage(monkeypatch):
     from fastapi.testclient import TestClient
 
     from api.main import app
-    from api.model import RACINE as RACINE_MODELE
-    from api.model import charger_modele
 
-    chemin_original = RACINE_MODELE / "models" / "sentiment.joblib"
-    chemin_factice = chemin_original.with_name("modele_inexistant_tp4.joblib")
+    predict = import_module("predict")
 
-    import predict
-
-    monkeypatch.setattr(predict, "MODELE", chemin_factice)
-    charger_modele.cache_clear()
+    monkeypatch.setattr(predict, "MODELE", MODELE.with_name("modele_inexistant_tp4.joblib"))
+    predict.charger_modele.cache_clear()
 
     try:
         with pytest.raises(FileNotFoundError):
             with TestClient(app):
                 pass
     finally:
-        charger_modele.cache_clear()
+        predict.charger_modele.cache_clear()
 
 
 def test_modele_non_charge_retourne_503(client, monkeypatch):
@@ -79,11 +77,7 @@ def test_erreur_modele_est_masquee(client, monkeypatch, erreur):
     """D.4 : une panne inattendue renvoie 500 sans exposer le détail."""
     from api.main import app
 
-    class FauxClassifier:
-        def predict(self, text):
-            raise erreur
-
-    monkeypatch.setattr(app.state, "classifier", FauxClassifier())
+    monkeypatch.setattr(app.state.classifier, "predict", Mock(side_effect=erreur))
 
     reponse = client.post(
         "/predict",
@@ -94,6 +88,7 @@ def test_erreur_modele_est_masquee(client, monkeypatch, erreur):
     assert reponse.json()["detail"] == "Erreur interne du serveur"
     assert "secret interne" not in reponse.text
     assert "bug interne" not in reponse.text
+
 
 def test_label_inconnu_est_refuse(client, monkeypatch):
     """Une étiquette inattendue doit être rejetée avec une erreur 500."""
@@ -117,3 +112,15 @@ def test_label_inconnu_est_refuse(client, monkeypatch):
     assert reponse.status_code == 500
     assert reponse.json()["detail"] == "Réponse invalide du modèle"
     assert "UNKNOWN" not in reponse.text
+
+
+def test_classes_inattendues_refusent_le_demarrage(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    import api.model as modele_api
+    from api.main import app
+
+    monkeypatch.setattr(modele_api, "charger_modele", lambda: SimpleNamespace(classes_=["neutral"]))
+    with pytest.raises(RuntimeError, match="Classes de sentiment inattendues"):
+        with TestClient(app):
+            pass

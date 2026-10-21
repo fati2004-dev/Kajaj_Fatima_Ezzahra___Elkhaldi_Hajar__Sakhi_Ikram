@@ -19,3 +19,21 @@ text,attendu,difficulte,erreur_connue
 "Le produit est joli mais beaucoup trop fragile",NEGATIVE,avis mixte,
 "Ce n'est pas mauvais, mais ce n'est pas excellent non plus",NEGATIVE,négation,
 "J'attendais mieux, même si la livraison était rapide",NEGATIVE,avis mixte,
+"Arrivé cassé, bravo le transporteur",NEGATIVE,ironie,
+"Le service client est très réactif",POSITIVE,,
+"Je ne rachèterai jamais",NEGATIVE,,
+"C'est correct, sans plus",NEGATIVE,mitigé,
+"Excellent produit",POSITIVE,,
+"Vraiment déçu",NEGATIVE,,
+"Je m'attendais à mieux",NEGATIVE,mitigé,avis nuancé absent du lexique d'entraînement
+"Top qualité",POSITIVE,,
+"Produit conforme à la description",POSITIVE,,
+"Livraison très lente",NEGATIVE,,expression absente du lexique d'entraînement
+"Je suis ravi de mon achat",POSITIVE,,
+"Fuyez !",NEGATIVE,,
+"Rapport qualité prix imbattable",POSITIVE,,
+"Le vendeur est malhonnête",NEGATIVE,,terme absent du lexique d'entraînement
+"Je l'utilise tous les jours",POSITIVE,,
+"Ça ne vaut pas le coup",NEGATIVE,expression idiomatique,
+"Superbe !",POSITIVE,,
+"Emballage déchiré",NEGATIVE,,formulation absente du lexique d'entraînement

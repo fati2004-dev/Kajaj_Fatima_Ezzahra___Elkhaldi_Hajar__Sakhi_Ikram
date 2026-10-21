@@ -12,18 +12,21 @@ MIN_AUTHORS = 2  # un binôme : deux auteurs de commits
 
 
 def _git(root: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout
+    return subprocess.run(
+        ["git", *args], cwd=root, capture_output=True, text=True, encoding="utf-8", check=True
+    ).stdout
 
 
 @pytest.fixture(scope="module")
 def git_root(root: Path) -> Path:
-    if shutil.which("git") is None or not (root / ".git").exists():
+    if shutil.which("git") is None:
         pytest.skip("pas un dépôt Git")
     try:
-        _git(root, "rev-parse", "HEAD")
+        repository = Path(_git(root, "rev-parse", "--show-toplevel").strip())
+        _git(repository, "rev-parse", "HEAD")
     except subprocess.CalledProcessError:
-        pytest.skip("aucun commit")
-    return root
+        pytest.skip("pas un dépôt Git ou aucun commit")
+    return repository
 
 
 def test_has_at_least_one_commit(git_root: Path):

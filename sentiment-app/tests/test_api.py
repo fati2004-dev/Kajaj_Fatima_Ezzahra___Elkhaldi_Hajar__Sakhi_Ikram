@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from api.model import SEUIL_ABSTENTION
+
 MODELE = Path(__file__).resolve().parents[1] / "models" / "sentiment.joblib"
 pytestmark = pytest.mark.skipif(not MODELE.exists(), reason="modèle non produit : python src/train.py")
 
@@ -38,14 +40,17 @@ def test_predict_positif(client):
     r = client.post("/predict", json={"text": "Livraison rapide, produit conforme, très satisfait"})
     assert r.status_code == 200
     body = r.json()
-    assert body["label"] == "POSITIVE"
+    attendu = "INDETERMINE" if body["score"] < SEUIL_ABSTENTION else "POSITIVE"
+    assert body["label"] == attendu
     assert 0.5 <= body["score"] <= 1.0
 
 
 def test_predict_negatif(client):
     r = client.post("/predict", json={"text": "Produit cassé et service injoignable, à fuir"})
     assert r.status_code == 200
-    assert r.json()["label"] == "NEGATIVE"
+    body = r.json()
+    attendu = "INDETERMINE" if body["score"] < SEUIL_ABSTENTION else "NEGATIVE"
+    assert body["label"] == attendu
 
 
 def test_predict_texte_vide_422(client):

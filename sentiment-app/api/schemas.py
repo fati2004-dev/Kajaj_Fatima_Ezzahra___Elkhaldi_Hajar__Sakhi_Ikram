@@ -1,7 +1,11 @@
 
 """Contrats d'entrée et de sortie de l'API (Pydantic v2)."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
+
+SentimentLabel = Literal["POSITIVE", "NEGATIVE", "INDETERMINE"]
 
 
 class PredictRequest(BaseModel):
@@ -17,30 +21,19 @@ class PredictRequest(BaseModel):
 
     @field_validator("text")
     @classmethod
-    def verifier_texte_non_blanc(cls, valeur: str) -> str:
+    def reject_whitespace_only(cls, value: str) -> str:
         """Refuse les chaînes vides ou composées uniquement d'espaces."""
-        if not valeur.strip():
+        if not value.strip():
             raise ValueError("Le texte ne doit pas être vide ou composé d'espaces")
-        return valeur
+        return value
 
 
 class PredictResponse(BaseModel):
     """Réponse de prédiction."""
 
-    label: str = Field(
-        ...,
-        description="POSITIVE, NEGATIVE ou INDETERMINE",
-    )
-    score: float = Field(
-        ...,
-        ge=0,
-        le=1,
-        description="Confiance de la classe prédite",
-    )
-    text: str = Field(
-        ...,
-        description="Aperçu du texte analysé (100 caractères)",
-    )
+    label: SentimentLabel = Field(..., description="POSITIVE, NEGATIVE ou INDETERMINE")
+    score: float = Field(..., ge=0, le=1, description="Confiance de la classe prédite")
+    text: str = Field(..., description="Aperçu du texte analysé (100 caractères)")
 
 
 class HealthResponse(BaseModel):

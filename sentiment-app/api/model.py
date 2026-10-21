@@ -2,23 +2,24 @@
 
 import sys
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import TypedDict
+
+from api.schemas import SentimentLabel
 
 RACINE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RACINE / "src"))
 
-from predict import charger_modele  # noqa: E402
-from predict import predict as _predict  # noqa: E402
+from predict import ModelSentiment, PredictionResult, charger_modele, predict as _predict  # noqa: E402
 
 SEUIL_ABSTENTION = 0.60
+ETIQUETTES: dict[ModelSentiment, SentimentLabel] = {
+    "positive": "POSITIVE",
+    "negative": "NEGATIVE",
+}
 
-LabelSentiment = Literal["POSITIVE", "NEGATIVE", "INDETERMINE"]
 
-
-class Prediction(TypedDict):
-    """Résultat d'une prédiction."""
-
-    label: LabelSentiment
+class ApiPrediction(TypedDict):
+    label: SentimentLabel
     score: float
     text: str
 
@@ -26,32 +27,23 @@ class Prediction(TypedDict):
 class SentimentClassifier:
     """Enveloppe du modèle TP2 avec seuil d'abstention."""
 
-    model_name = "tfidf-logreg (TP2, models/sentiment.joblib)"
+    model_name: str = "tfidf-logreg (TP2, models/sentiment.joblib)"
 
     def __init__(self) -> None:
-        """Vérifie que le modèle est disponible."""
-        charger_modele()
+        model = charger_modele()
+        classes = set(model.classes_)
+        if classes != set(ETIQUETTES):
+            raise RuntimeError(f"Classes de sentiment inattendues : {sorted(classes)!r}")
 
-    def predict(self, text: str) -> Prediction:
-        """Prédit le sentiment ou s'abstient si la confiance est trop faible."""
-        resultat = _predict(text)
-        score = resultat["score"]
-        etiquette = resultat["label"].lower()
-
-        if score < SEUIL_ABSTENTION:
-            etiquette_finale: LabelSentiment = "INDETERMINE"
-        elif etiquette == "positive":
-            etiquette_finale = "POSITIVE"
-        elif etiquette == "negative":
-            etiquette_finale = "NEGATIVE"
-        else:
+    def predict(self, text: str) -> ApiPrediction:
+        """Renvoie le sentiment, ou INDETERMINE si le score est sous le seuil."""
+        resultat: PredictionResult = _predict(text)
+        label = ETIQUETTES.get(resultat["label"])
+        if label is None:
             raise ValueError("Étiquette inconnue renvoyée par le modèle")
-
-        return {
-            "label": etiquette_finale,
-            "score": score,
-            "text": text[:100],
-        }
+        if resultat["score"] < SEUIL_ABSTENTION:
+            label = "INDETERMINE"
+        return {"label": label, "score": resultat["score"], "text": text[:100]}
 
 
 def load_model() -> SentimentClassifier:

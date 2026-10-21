@@ -1,4 +1,4 @@
-# VÃ©rifications lancÃ©es Ã  chaque Â« git commit Â» (TP4, Ã©tape E).
+# Vérifications lancées à chaque « git commit » (TP4, étape E).
 # Installation, une fois par clone : pre-commit install
 # Les outils sont ceux de l'environnement virtuel : activez-le avant de commiter.
 repos:
@@ -10,8 +10,8 @@ repos:
         language: system
         types: [python]
       - id: mypy
-        name: mypy (contrat typÃ© de l'API)
-        entry: mypy --disable-error-code=import-untyped sentiment-app/api
+        name: mypy (contrat typé de l'API)
+        entry: mypy --config-file sentiment-app/pyproject.toml sentiment-app/api
         language: system
         types: [python]
         pass_filenames: false
