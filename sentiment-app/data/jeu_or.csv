@@ -10,11 +10,11 @@ text,attendu,difficulte,erreur_connue
 "Fonctionne parfaitement depuis un mois",POSITIVE,,
 "Je recommande ce produit sans hésiter",POSITIVE,,
 "Le produit est arrivé cassé",NEGATIVE,,
-"Très mauvaise qualité, je regrette cet achat",NEGATIVE,,
+"Très mauvaise qualité, je regrette cet achat",NEGATIVE,négation,"Le modèle TF-IDF confond encore cet avis négatif avec un avis positif"
+"Je ne recommande absolument pas ce produit",NEGATIVE,négation,"Le modèle TF-IDF gère mal la négation dans cette phrase"
 "Livraison en retard et aucune réponse",NEGATIVE,,
 "Le produit ne fonctionne pas",NEGATIVE,,
 "Service décevant et personnel désagréable",NEGATIVE,,
-"Je ne recommande absolument pas ce produit",NEGATIVE,négation,
 "Bon emballage mais produit défectueux",NEGATIVE,avis mixte,
 "Le produit est joli mais beaucoup trop fragile",NEGATIVE,avis mixte,
 "Ce n'est pas mauvais, mais ce n'est pas excellent non plus",NEGATIVE,négation,

@@ -1,4 +1,3 @@
-
 """API REST du classifier de sentiment (TP3).
 
 Lancer : uvicorn api.main:app --reload
@@ -7,6 +6,7 @@ Doc    : http://localhost:8000/docs
 
 import logging
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,10 +20,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sentiment_api")
 
+LabelsAutorises = Literal["POSITIVE", "NEGATIVE", "INDETERMINE"]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Charge le modèle une seule fois, avant la première requête."""
+    """Charge le modèle avant la première requête."""
     logger.info("Démarrage de l'API...")
     app.state.classifier = load_model()
     logger.info(
@@ -41,8 +43,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS : indispensable pour un frontend web (TP5).
-# En production, lister les domaines autorisés.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,6 +53,7 @@ app.add_middleware(
 
 
 def _classifier():
+    """Retourne le classifier ou signale qu'il n'est pas chargé."""
     clf = getattr(app.state, "classifier", None)
     if clf is None:
         raise HTTPException(
@@ -64,6 +65,7 @@ def _classifier():
 
 @app.get("/", summary="Accueil")
 async def root():
+    """Retourne les informations principales de l'API."""
     return {
         "message": "Sentiment Analysis API",
         "docs": "/docs",
@@ -82,22 +84,30 @@ async def health_check():
 
 @app.post("/predict", response_model=PredictResponse, summary="Classifier un texte")
 async def predict(request: PredictRequest):
-    """Renvoie le sentiment (POSITIVE ou NEGATIVE) et la confiance.
+    """Renvoie le sentiment et le score de confiance.
 
-    - 422 : texte vide ou trop long (Pydantic), ou refusé par le modèle
-    - 503 : modèle non chargé
-    - 500 : erreur inattendue (journalisée côté serveur)
+    422 : requête invalide selon le schéma Pydantic.
+    503 : modèle non chargé.
+    500 : erreur interne pendant la prédiction.
     """
     clf = _classifier()
 
     try:
         result = clf.predict(request.text)
 
-    except ValueError as e:
-        raise HTTPException(
-            status_code=422,
-            detail=str(e),
-        ) from e
+        if result["label"] not in {
+            "POSITIVE",
+            "NEGATIVE",
+            "INDETERMINE",
+        }:
+            logger.error("Le modèle a renvoyé une étiquette inconnue")
+            raise HTTPException(
+                status_code=500,
+                detail="Réponse invalide du modèle",
+            )
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.exception("Erreur lors de la prédiction")
@@ -125,4 +135,3 @@ if __name__ == "__main__":
         port=8000,
         log_level="info",
     )
-

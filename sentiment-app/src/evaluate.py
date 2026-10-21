@@ -1,58 +1,71 @@
-#!/usr/bin/env python
-"""Évalue le modèle sauvegardé et affiche la matrice de confusion.
+"""Évaluation du modèle de sentiment entraîné au TP2."""
 
-Usage :
-  python src/evaluate.py             # sur le jeu de démonstration
-  python src/evaluate.py --allocine  # sur le jeu Allociné
-"""
-import argparse
-import sys
+import json
 from pathlib import Path
 
 import joblib
-from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))   # pour lancer depuis la racine
-from train import GRAINE, MODELE, charger  # mêmes constantes que l'entraînement
-
 RACINE = Path(__file__).resolve().parents[1]
-ETIQUETTES = ["negative", "positive"]
+DONNEES = RACINE / "data" / "demo_reviews.csv"
+MODELE = RACINE / "models" / "sentiment.joblib"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--allocine", action="store_true")
-    args = parser.parse_args()
+    """Évalue le modèle et affiche ses principales métriques."""
+    if not DONNEES.exists():
+        print(f"Fichier de données introuvable : {DONNEES}")
+        return 1
 
     if not MODELE.exists():
-        raise SystemExit("Modèle absent : lancez d'abord python src/train.py")
-    pipeline = joblib.load(MODELE)
+        print(f"Modèle introuvable : {MODELE}")
+        return 1
 
-    df, source = charger(args.allocine)
-    # Même découpage que l'entraînement : même graine, mêmes proportions
+    import pandas as pd
+
+    donnees = pd.read_csv(DONNEES)
+    X = donnees["text"].astype(str)
+    y = donnees["label"].astype(str)
+
     _, X_test, _, y_test = train_test_split(
-        df["review"], df["label"], test_size=0.2, random_state=GRAINE, stratify=df["label"]
+        X,
+        y,
+        test_size=0.20,
+        random_state=42,
+        stratify=y,
     )
-    y_pred = pipeline.predict(X_test)
 
-    print(f"Évaluation sur {len(X_test)} avis ({source})\n")
-    print(classification_report(y_test, y_pred, digits=3, zero_division=0))
-    mc = confusion_matrix(y_test, y_pred, labels=ETIQUETTES)
+    modele = joblib.load(MODELE)
+    y_pred = modele.predict(X_test)
+
+    print("Rapport de classification :")
+    print(classification_report(y_test, y_pred, zero_division=0))
+
+    mc = confusion_matrix(y_test, y_pred)
+    etiquettes = sorted(y.unique())
+
     print("Matrice de confusion (lignes = vérité, colonnes = prédiction)")
-    print(f"{'':>10}{ETIQUETTES[0]:>10}{ETIQUETTES[1]:>10}")
-    for nom, ligne in zip(ETIQUETTES, mc):
+    print(f"{'':>10}{etiquettes[0]:>10}{etiquettes[1]:>10}")
+    for nom, ligne in zip(etiquettes, mc, strict=True):
         print(f"{nom:>10}{ligne[0]:>10}{ligne[1]:>10}")
 
-    faux_negatifs = mc[1][0]
-    faux_positifs = mc[0][1]
-    print(f"\n{faux_positifs} négatifs classés positifs, {faux_negatifs} positifs classés négatifs")
-
-    # Trois erreurs à lire, pour comprendre ce que le sac de mots ne voit pas
-    erreurs = [(t, v, p) for t, v, p in zip(X_test, y_test, y_pred) if v != p]
+    erreurs = [
+        (texte, vrai, predit)
+        for texte, vrai, predit in zip(X_test, y_test, y_pred, strict=True)
+        if vrai != predit
+    ]
     print(f"\n{len(erreurs)} erreurs au total. Trois exemples :")
     for texte, vrai, predit in erreurs[:3]:
         print(f"  vérité={vrai:9s} prédit={predit:9s} | {texte[:90]}")
+
+    fichier_metriques = RACINE / "models" / "metrics.json"
+    if fichier_metriques.exists():
+        with fichier_metriques.open(encoding="utf-8") as fichier:
+            metriques = json.load(fichier)
+        print("\nMétriques enregistrées :")
+        print(json.dumps(metriques, indent=2, ensure_ascii=False))
+
     return 0
 
 
