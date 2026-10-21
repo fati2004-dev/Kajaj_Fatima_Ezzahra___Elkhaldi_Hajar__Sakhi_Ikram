@@ -3,8 +3,8 @@
 ## 1. Couverture
 
 - La couverture initiale de l'étape A n'a pas été mesurée avant les premières corrections.
-- Après les tests d'intégration : **97,65 %** pour `api/` (85 statements, 2 manquants).
-- Les lignes 83–85 de `api/main.py` sont le démarrage Uvicorn sous `if __name__ == "__main__"` ; les tests HTTP utilisent `TestClient` et n'exécutent pas ce point d'entrée de serveur.
+- Après les tests d'intégration : **96,81 %** pour `api/` (94 statements, 3 manquants).
+- Les lignes manquantes concernent le démarrage Uvicorn sous `if __name__ == "__main__"` et le garde-fou contre une étiquette inconnue ; les tests HTTP utilisent `TestClient` et n'exécutent pas le point d'entrée du serveur.
 
 ## 2. Défauts trouvés
 
@@ -41,4 +41,4 @@ Les six erreurs connues sont conservées plutôt que de modifier les étiquettes
 
 ## Vérification finale
 
-`pytest -q --cov=api --cov-report=term-missing --cov-fail-under=95` : **81 passed, 4 xfailed**, couverture totale de `api/` **97,65 %**. Les quatre `xfail` correspondent aux erreurs connues listées dans le jeu d'or.
+`pytest -q --cov=api --cov-report=term-missing --cov-fail-under=95` : **111 passed, 6 xfailed**, couverture totale de `api/` **96,81 %**. Les six `xfail` correspondent aux erreurs connues listées dans le jeu d'or.

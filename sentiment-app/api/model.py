@@ -9,7 +9,8 @@ from api.schemas import SentimentLabel
 RACINE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RACINE / "src"))
 
-from predict import ModelSentiment, PredictionResult, charger_modele, predict as _predict  # noqa: E402
+from predict import ModelSentiment, PredictionResult, charger_modele  # noqa: E402
+from predict import predict as _predict  # noqa: E402
 
 SEUIL_ABSTENTION = 0.60
 ETIQUETTES: dict[ModelSentiment, SentimentLabel] = {
